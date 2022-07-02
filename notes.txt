@@ -1,9 +1,0 @@
-initial spread of 20 at [0, 0, 0] is a pretty uniform initialization
-the coordinates are a little wonky in some views, but they are consistant.
-the XY plane is perpendicular to the screen, and positive Z is up.
-mathematically, the coordinates of the system are translated down (up?) by 27.
-when you spawn particles at [0, 0, 0], they actually spawn at [0, 0, 27].
-
-next steps for this project:
-    allow realtime adjustment of the function parameters
-    figure out how to make an envelope follower for an audio stream so that timestep can synchronize with music
