@@ -1,25 +1,22 @@
-/// <reference path="../../TSDef/global.d.ts" />
+/// <reference path="../../TSDef/p5/global.d.ts" />
 
-// gui
-let controls = new controlPanel(); // this abstracts DOM elements in a way that lets me easily manage and position them
-let pauseButton; // this button functions as a giant checkbox
+// parameters to be controlledst
+const controls = {
+  sigma: 10,
+  rho: 28,
+  beta: 8.0 / 3.0,
+  t: .01,
+  partNum: 400,
+  partSize: 1,
+  outlines: false,
+  view: "rotate",
+  trace: false,
+  spread: 5,
+  spawnPoint: {x: 7, y: -9, z: 0}
+}
 let paused = false;
-let hideButton; // so does this one
-let hidden = false;
-let tSlider;
-let partNumSlider;
-let partSizeSlider;
-let outlines;
-let view;
-let trace;
-let traceClicked = false;
-let initButton;
-let initialSpread;
-let initialX;
-let initialY;
-let initialZ;
+let fpsGraph;
 
-// app
 let clock = -600; // allows the camera to orbit in "rotate" view. -600 looks good at the start of the default settings
 let fov; // used for remembering current field of view and resizing the window
 // looking back, I could have just moved the camera to get a similar effect as this.
@@ -27,9 +24,6 @@ let fov; // used for remembering current field of view and resizing the window
 let scaleFactor = 4;
 let scaleFactorTail = scaleFactor * 1; // in case you want to to exaggerate speed stretch (doesn't look that good)
 
-// controlled parameters located in ctrlPanel.js
-
-const fps = [];
 const particles = [];
 
 
@@ -69,7 +63,7 @@ class particle {
     rotate(abs(initVec.angleBetween(this.dir)), initVec.cross(this.dir)); // align box x axis with direction
     translate(-this.dir.mag() * scaleFactorTail / 2, 0, 0); // adjust box origin from the center to front face
     fill(this.color);
-    box(max(this.dir.mag() * scaleFactorTail, params.partSize), params.partSize, params.partSize); // draw box elongated to previous location
+    box(max(this.dir.mag() * scaleFactorTail, controls.partSize), controls.partSize, controls.partSize); // draw box elongated to previous location
     pop();
   }
 }
@@ -86,78 +80,16 @@ function createParticles(number) {
     // and assigns it a random value 0-255
     colRand[(random([1, 2]) + colRandIndex) % 3] = random(255);
     particles.push(new particle(
-      random(-1, 1) * max(params.initSpread, .000000001) + params.initX, // minimum spread is 1 billionth of a unit
-      random(-1, 1) * max(params.initSpread, .000000001) - params.initY,
-      random(-1, 1) * max(params.initSpread, .000000001) + params.initZ + 27,
+      random(-1, 1) * max(controls.spread, .000000001) + controls.spawnPoint.x, // minimum spread is 1 billionth of a unit
+      random(-1, 1) * max(controls.spread, .000000001) - controls.spawnPoint.y,
+      random(-1, 1) * max(controls.spread, .000000001) + controls.spawnPoint.z + 27,
       color(...colRand)));
-  }
-}
-
-// these two functions called by the part num slider and input
-function changePartNumSlider() {
-  params.partNum = partNumSlider.elements.slider.value(); // update variable
-  partNumSlider.elements.number.value(params.partNum); // update number
-  if(params.partNum > particles.length) { // update particles
-    createParticles(params.partNum - particles.length);
-  } else {
-    let dif = particles.length - params.partNum;
-    for(let i = 0; i < dif; i++) {
-      particles.shift();
-    }
-  }
-}
-function changePartNumNumber() {
-  partNumSlider.elements.slider.value(partNumSlider.elements.number.value()); // update slider
-  params.partNum = partNumSlider.elements.slider.value(); // update variable from slider
-  if(params.partNum > particles.length) { // update particles
-    createParticles(params.partNum - particles.length);
-  } else {
-    let dif = particles.length - params.partNum;
-    for(let i = 0; i < dif; i++) {
-      particles.shift();
-    }
-  }
-}
-
-// called when pause button is pressed
-function toggle_pause() {
-  if(!paused) {
-    pauseButton.button.html("resume")
-    paused = true;
-  } else {
-    pauseButton.button.html("pause")
-    paused = false;
-  }
-}
-
-// called when hide button is pressed
-function toggle_hide() {
-  if(!hidden) {
-    hideButton.button.html("show controls");
-    hidden = true;
-    controls.toggleVisible();
-  } else {
-    hideButton.button.html("hide controls");
-    hidden = false;
-    controls.toggleVisible();
   }
 }
 
 // reset trace when switching views
 function viewChanged() {
   trace.checkbox.checked(false);
-}
-
-// clear and respawn particles
-function initialize() {
-  background(0);
-  while(particles.length > 0) { // delete existing particles
-    particles.pop();
-  }
-  createParticles(params.partNum);
-  if(paused) { // unpause when respawning
-    toggle_pause();
-  }
 }
 
 // yup, it's that easy.
@@ -173,60 +105,82 @@ function setup() {
   createCanvas(windowWidth, windowHeight, WEBGL); // 3D mode
   background(0); // initialize
   
-  // set up controls with classes from ctrlPanel.js
-  pauseButton = new button(toggle_pause, "pause");
-  pauseButton.fixed = true; // always visible
-  hideButton = new button(toggle_hide, "hide controls");
-  hideButton.fixed = true; // always visible
-  tSlider = new richSlider("t", "- timestep -------------", 5, 0.0001, .012, params.t, 0.0001);
-  partNumSlider = new richSlider("partNum", "- number of particles --", 3.5, 1, 1000, params.partNum, 1,);
-  partNumSlider.elements.slider.input(changePartNumSlider); // override standard behavior on these two
-  partNumSlider.elements.number.input(changePartNumNumber); // they need to call a function to change partnum instead of just changing the variable
-  partSizeSlider = new richSlider("partSize", "- particle size --------", 2, 1, 30, params.partSize, 1);
-  outlines = new checkbox("particle outlines", false, 100, 100);
-  view = new richSelector("- view -----------------", ["rotate", "top", "bottom", "side"], 130, 160);
-  view.elements.selector.changed(viewChanged);
-  trace = new checkbox("trace", false, 100, 50, 0, 27); // this uses the offset arguments to position it within "view"
-  initButton = new button(initialize, "respawn", 100, 35);
-  initialSpread = new richNumberInput("initSpread", "spread", 67, params.initSpread, 4, 100, 33);
-  initialX = new richNumberInput("initX", "X", 15, params.initX, 3);
-  initialY = new richNumberInput("initY", "Y", 15, params.initY, 3);
-  initialZ = new richNumberInput("initZ", "Z", 15, params.initZ, 3);
+  // set up gui
+  // define where the control panel should go
+  const controlsContainer = createDiv();
+  controlsContainer.id("controlsContainer");
+  controlsContainer.style("position", "fixed"); // always visible, even when scrolling
+  controlsContainer.style("top", "10px");
+  controlsContainer.style("left", "10px"); // left or right
+  controlsContainer.style("width", "300px");
+  // create a pane as a child of the previously created div
+  const pane = new Tweakpane.Pane({container: document.getElementById("controlsContainer"), title: "controls", expanded: true});
+  pane.registerPlugin(TweakpaneEssentialsPlugin); // add plugin for fpsgraph
+  pane.addSeparator();
+  const pauseBtn = pane.addButton({title: "pause"}); // create pause button
+  pauseBtn.on("click", () => { // alternatively, use () => yourFunc(anArg, anotherArg) to call any function with arguments
+    if(!paused) {
+      paused = true;
+      pauseBtn.title = "resume";
+    } else {
+      paused = false;
+      pauseBtn.title = "pause";
+    }
+  });
+  pane.addSeparator();
 
+  pane.addInput(controls, "t", {label: "time step", min: 0.0001, max: 0.01, format: (v) => v.toFixed(4)});
+  pane.addInput(controls, "partNum", {label: "particle number", min: 1, max: 1000, step: 1}).on("change", (ev) => {
 
-  // add controls to the control panel
-  // everything is added from top top bottom (left to right for elements in the same row)
-  controls.addElementVertical(pauseButton);
-  controls.addElementHorizontal(hideButton);
-  controls.addElementVertical(tSlider);
-  controls.addElementVertical(partNumSlider);
-  controls.addElementVertical(partSizeSlider);
-  controls.addElementVertical(outlines);
-  controls.addElementVertical(view);
-  controls.addElementHorizontal(trace);
-  controls.addElementVertical(initButton);
-  controls.addElementVertical(initialSpread);
-  controls.addElementVertical(initialX);
-  controls.addElementHorizontal(initialY);
-  controls.addElementHorizontal(initialZ);
-  
-  // put a little border there 
-  controls.position(10, 10);
+    // IS THIS SETTING PART NUM BEFORE THIS CODE??
+
+    if(controls.partNum > particles.length) { // update particles
+      createParticles(controls.partNum - particles.length);
+    } else {
+      let dif = particles.length - controls.partNum;
+      for(let i = 0; i < dif; i++) {
+        particles.shift();
+      }
+    }
+  });
+  pane.addInput(controls, "partSize", {label: "particle size", min: 1, max: 30, step: 1});
+  pane.addInput(controls, "outlines", {label: "draw outlines"});
+  pane.addInput(controls, "trace");
+  pane.addInput(controls, "view", {options: {rotate: "rotate", top: "top", bottom: "bottom", side: "side"}});
+  pane.addSeparator();
+  pane.addButton({title: "respawn particles"}).on("click", () => {
+    background(0);
+    while(particles.length > 0) { // delete existing particles
+      particles.pop();
+    }
+    createParticles(controls.partNum);
+    if(paused) {
+      paused = false;
+      pauseBtn.title = "pause";
+    }
+  })
+  pane.addInput(controls, "spread");
+  pane.addInput(controls, "spawnPoint", {label: "spawn point", x: {min: -30, max: 30}, y: {min: -30, max: 30}, z: {min: -30, max: 30}});
+ 
+  pane.addSeparator();
+  const stats = pane.addFolder({title: "stats", expanded: false});
+  fpsGraph = stats.addBlade({view: "fpsgraph", label: "fps"});
 
   // set up particles
-  createParticles(params.partNum);
+  createParticles(controls.partNum);
 }
 
 
 
 
 function draw() {
+  fpsGraph.begin();
   if(!paused) {
-    if(!trace.checkbox.checked()) { // clear every frame or not
+    if(!controls.trace) { // clear every frame or not
       background(0);
     }
     push();
-    if(outlines.checkbox.checked()) { // draw outlines or not
+    if(controls.outlines) { // draw outlines or not
       stroke(64);
       strokeWeight(.66); // good value if you want to use larger particle sizes
     } else {
@@ -235,15 +189,15 @@ function draw() {
     translate(0, 0, -27 * scaleFactor); // center the system
     let len = particles.length;
     for(let i = 0; i < len; i++) { // calculate and draw the actual particles
-      particles[i].update(params.sigma, params.rho, params.beta, params.t);
+      particles[i].update(controls.sigma, controls.rho, controls.beta, controls.t);
       particles[i].draw();
     }
     pop();
 
     // camera controls
-    switch(view.elements.selector.value()) { // based on the currently selected view
+    switch(controls.view) { // based on the currently selected view
       case "rotate":
-        if(!trace.checkbox.checked()) {
+        if(!controls.trace) {
           traceClicked = true;
           // draw box to help visualize rotation
           push();
@@ -261,20 +215,21 @@ function draw() {
         break;
       case "top":
         camera(0, 0, 212 * scaleFactor, 0, 0, 0, 0, 1, 0); // fixed camera
-        fov = .3;
+        fov = .4;
         perspective(fov, width / height); // zoom in with FoV
         break;
       case "bottom":
         camera(0, 0, -212 * scaleFactor, 0, 0, 0, 0, 1, 0);
-        fov = .3;
+        fov = .4;
         perspective(fov, width / height);
         break;
       case "side":
         camera(150 * scaleFactor, -150 * scaleFactor, 0, 0, 0, 0, 0, 0, -1);
-        fov = .3;
+        fov = .4;
         perspective(fov, width / height);
         break;
     }
     clock++;
   }
+  fpsGraph.end();
 }
