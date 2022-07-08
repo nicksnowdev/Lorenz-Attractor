@@ -5,7 +5,7 @@ const controls = {
   sigma: 10,
   rho: 28,
   beta: 8.0 / 3.0,
-  t: .01,
+  t: 0.01,
   partNum: 400,
   partSize: 1,
   outlines: false,
