@@ -111,7 +111,7 @@ function setup() {
   controlsContainer.id("controlsContainer");
   controlsContainer.style("position", "fixed"); // always visible, even when scrolling
   controlsContainer.style("top", "10px");
-  controlsContainer.style("left", "10px"); // left or right
+  controlsContainer.style("right", "10px"); // left or right
   controlsContainer.style("width", "300px");
   // create a pane as a child of the previously created div
   const pane = new Tweakpane.Pane({container: document.getElementById("controlsContainer"), title: "controls", expanded: true});
@@ -146,7 +146,9 @@ function setup() {
   pane.addInput(controls, "partSize", {label: "particle size", min: 1, max: 30, step: 1});
   pane.addInput(controls, "outlines", {label: "draw outlines"});
   pane.addInput(controls, "trace");
-  pane.addInput(controls, "view", {options: {rotate: "rotate", top: "top", bottom: "bottom", side: "side"}});
+  pane.addInput(controls, "view", {options: {rotate: "rotate", top: "top", bottom: "bottom", side: "side"}}).on("change", () => {
+    background(0);
+  });
   pane.addSeparator();
   pane.addButton({title: "respawn particles"}).on("click", () => {
     background(0);
@@ -179,20 +181,6 @@ function draw() {
     if(!controls.trace) { // clear every frame or not
       background(0);
     }
-    push();
-    if(controls.outlines) { // draw outlines or not
-      stroke(64);
-      strokeWeight(.66); // good value if you want to use larger particle sizes
-    } else {
-      noStroke();
-    }
-    translate(0, 0, -27 * scaleFactor); // center the system
-    let len = particles.length;
-    for(let i = 0; i < len; i++) { // calculate and draw the actual particles
-      particles[i].update(controls.sigma, controls.rho, controls.beta, controls.t);
-      particles[i].draw();
-    }
-    pop();
 
     // camera controls
     switch(controls.view) { // based on the currently selected view
@@ -206,7 +194,7 @@ function draw() {
           box(60 * scaleFactor);
           pop();
         } else if(traceClicked) {
-          background(0);
+          background(0); // clear the box when clicking trace
           traceClicked = false;
         }
         camera(sin(clock / 360) * 100 * scaleFactor, cos(clock / 360) * 100 * scaleFactor, 0, 0, 0, 0, 0, 0, -1); // orbital camera
@@ -229,6 +217,21 @@ function draw() {
         perspective(fov, width / height);
         break;
     }
+
+    push();
+    if(controls.outlines) { // draw outlines or not
+      stroke(64);
+      strokeWeight(.66); // good value if you want to use larger particle sizes
+    } else {
+      noStroke();
+    }
+    translate(0, 0, -27 * scaleFactor); // center the system
+    let len = particles.length;
+    for(let i = 0; i < len; i++) { // calculate and draw the actual particles
+      particles[i].update(controls.sigma, controls.rho, controls.beta, controls.t);
+      particles[i].draw();
+    }
+    pop();
     clock++;
   }
   fpsGraph.end();
