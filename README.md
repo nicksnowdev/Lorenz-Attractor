@@ -1,7 +1,7 @@
 # Lorenz-Attractor
  Made with p5.js
  
- Try it here: https://openprocessing.org/sketch/1611167
+ Try it here: https://one-lemon.com/projects/lorenz_attractor/
  
  This project is my first attempt at exploring the 3D capabilities of the p5 library. Besides looking cool, this project can also illustrate how a very tightly-grouped region of particles in this system will quickly diverge over time. Try setting spread to 0, it actually goes to 1 billionth of a unit.
 
