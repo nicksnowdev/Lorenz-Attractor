@@ -1,0 +1,1 @@
+Hundreds of particles trace out the shape of the Lorenz attractor, their motion described by a system of differential equations. The system was originally created to model convection currents.
