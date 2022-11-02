@@ -1,1 +1,5 @@
 Hundreds of particles trace out the shape of the Lorenz attractor, their motion described by a system of differential equations. The system was originally created to model convection currents.
+
+You can change the number of particles to be simulated, as well as their initial grouping and location. Setting spread to something like .01 shows the chaotic nature of this system. The particles start out with very similar initial conditions, but eventually become disordered.
+
+There are a few other visual parameters to play with as well.
